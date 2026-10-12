@@ -1,0 +1,38 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3316:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 60
+    env:
+      MYSQL_TEST_DSN: "mcp_ro:mcp_ro@tcp(127.0.0.1:3316)/demo"
+      MYSQL_TEST_ROOT_DSN: "root:root@tcp(127.0.0.1:3316)/demo"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      # Service containers start before checkout, so the seed is loaded here.
+      - name: Load sample database
+        run: mysql -h 127.0.0.1 -P 3316 -uroot -proot < testdata/seed.sql
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test -race ./...
