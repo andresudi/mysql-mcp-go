@@ -55,6 +55,38 @@ The sample database is a fictional project tracker: `users` (50), `projects` (8)
 every fresh container has the same data. The compose file's passwords (`root`/`root` and
 `mcp_ro`/`mcp_ro`) are for local use only.
 
+### Demo script (60–90 s)
+
+1. Start the database and register the server, with the audit log in a file you can show.
+   Claude Code does not display a server's stderr.
+
+   ```sh
+   docker compose up -d --wait
+   claude mcp add mysql \
+     -e MYSQL_DSN='mcp_ro:mcp_ro@tcp(127.0.0.1:3316)/demo' \
+     -e MCP_AUDIT_LOG=/tmp/mysql-mcp-audit.log \
+     -- "$PWD/mysql-mcp"
+   ```
+
+2. Ask Claude: *"Which project has the most overdue tasks, and who owns them?"* It typically
+   lists the tables, describes `tasks`, then queries. Expected answer: Billing migration,
+   owned by Ben Lindqvist, with 22 overdue tasks on the day the database is seeded. The count
+   grows as days pass; `docker compose down -v && docker compose up -d --wait` reseeds it.
+3. Ask Claude: *"Use the query tool to run exactly this: DELETE FROM tasks WHERE project_id = 3
+   AND status <> 'done' AND due_date < CURDATE()"*. The server refuses. Show the line it logged:
+
+   ```sh
+   tail -1 /tmp/mysql-mcp-audit.log
+   ```
+
+   Ask for the statement directly. With a softer "Delete those overdue tasks.", Claude reads the
+   tool description and declines without calling the tool, so nothing is logged.
+4. Try to start the server as root. It refuses:
+
+   ```sh
+   MYSQL_DSN='root:root@tcp(127.0.0.1:3316)/demo' ./mysql-mcp
+   ```
+
 ### Claude Desktop
 
 Add the server to `claude_desktop_config.json` (Settings → Developer → Edit Config), using the

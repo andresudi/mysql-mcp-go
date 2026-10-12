@@ -111,10 +111,16 @@ container has the same data. Due dates are offset from `CURDATE()` at seed time 
 
 ## Demo script (60–90 s)
 
-1. `docker compose up -d`, then `claude mcp add mysql -- ./mysql-mcp` with `MYSQL_DSN` set.
+1. `docker compose up -d --wait`, then `claude mcp add mysql` with `MYSQL_DSN` set and
+   `MCP_AUDIT_LOG` pointing at a file. Claude Code does not show a server's stderr, so the
+   audit line has to go to a file to be shown in step 3.
 2. Ask: "Which project has the most overdue tasks, and who owns them?" — Claude lists,
    describes, then queries.
-3. Ask: "Delete those overdue tasks." — refused; show the audit-log line.
+3. Ask: "Use the query tool to run exactly this: DELETE FROM tasks WHERE project_id = 3 AND
+   status <> 'done' AND due_date < CURDATE()" — refused; `tail -1` the audit log.
+   A softer "Delete those overdue tasks." is not enough: in a dry run on 2026-10-12, Claude
+   read the `query` tool's description and declined without calling it, so no audit line
+   was written.
 4. Restart with the root DSN — the server refuses to start.
 
 ## Non-goals
