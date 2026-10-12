@@ -4,6 +4,7 @@ package tools
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/andresudi/mysql-mcp-go/internal/audit"
 	"github.com/andresudi/mysql-mcp-go/internal/db"
@@ -100,24 +101,40 @@ type handlers struct {
 	log   *audit.Logger
 }
 
-func (h handlers) listTables(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, ListTablesOutput, error) {
+// record writes the audit line for one call. The audit log is not a safety
+// layer, so a failed write does not fail the call.
+func (h handlers) record(e audit.Entry, start time.Time, rows int, err error) {
+	e.Time = start
+	e.Duration = time.Since(start)
+	e.RowCount = rows
+	e.Err = err
+	_ = h.log.Log(e)
+}
+
+func (h handlers) listTables(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (_ *mcp.CallToolResult, out ListTablesOutput, err error) {
+	start := time.Now()
+	defer func() { h.record(audit.Entry{Tool: "list_tables"}, start, len(out.Tables), err) }()
+
 	tables, err := h.store.ListTables(ctx)
 	if err != nil {
 		return nil, ListTablesOutput{}, err
 	}
-	out := ListTablesOutput{Tables: make([]TableInfo, len(tables))}
+	out = ListTablesOutput{Tables: make([]TableInfo, len(tables))}
 	for i, t := range tables {
 		out.Tables[i] = TableInfo{Name: t.Name, EstimatedRows: t.EstimatedRows, Comment: t.Comment}
 	}
 	return nil, out, nil
 }
 
-func (h handlers) describeTable(ctx context.Context, _ *mcp.CallToolRequest, in DescribeTableInput) (*mcp.CallToolResult, DescribeTableOutput, error) {
+func (h handlers) describeTable(ctx context.Context, _ *mcp.CallToolRequest, in DescribeTableInput) (_ *mcp.CallToolResult, out DescribeTableOutput, err error) {
+	start := time.Now()
+	defer func() { h.record(audit.Entry{Tool: "describe_table", Table: in.Table}, start, len(out.Columns), err) }()
+
 	desc, err := h.store.DescribeTable(ctx, in.Table)
 	if err != nil {
 		return nil, DescribeTableOutput{}, err
 	}
-	out := DescribeTableOutput{
+	out = DescribeTableOutput{
 		Table:   desc.Name,
 		Columns: make([]ColumnInfo, len(desc.Columns)),
 		Indexes: make([]IndexInfo, len(desc.Indexes)),
@@ -131,7 +148,10 @@ func (h handlers) describeTable(ctx context.Context, _ *mcp.CallToolRequest, in 
 	return nil, out, nil
 }
 
-func (h handlers) query(ctx context.Context, _ *mcp.CallToolRequest, in QueryInput) (*mcp.CallToolResult, QueryOutput, error) {
+func (h handlers) query(ctx context.Context, _ *mcp.CallToolRequest, in QueryInput) (_ *mcp.CallToolResult, out QueryOutput, err error) {
+	start := time.Now()
+	defer func() { h.record(audit.Entry{Tool: "query", SQL: in.SQL}, start, out.RowCount, err) }()
+
 	if !guard.AllowedStatement(in.SQL) {
 		return nil, QueryOutput{}, errNotRead
 	}
