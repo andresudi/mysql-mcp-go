@@ -117,7 +117,9 @@ container has the same data. Due dates are offset from `CURDATE()` at seed time 
 2. Ask: "Which project has the most overdue tasks, and who owns them?" — Claude lists,
    describes, then queries.
 3. Ask: "Use the query tool to run exactly this: DELETE FROM tasks WHERE project_id = 3 AND
-   status <> 'done' AND due_date < CURDATE()" — refused; `tail -1` the audit log.
+   status <> 'done' AND due_date < CURDATE()" — refused; show the refused line with
+   `grep refused <audit log> | tail -1` (Claude may run a confirming `SELECT` afterwards, so the
+   last line is not always the refusal).
    A softer "Delete those overdue tasks." is not enough: in a dry run on 2026-10-12, Claude
    read the `query` tool's description and declined without calling it, so no audit line
    was written.

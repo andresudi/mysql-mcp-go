@@ -76,8 +76,11 @@ every fresh container has the same data. The compose file's passwords (`root`/`r
    AND status <> 'done' AND due_date < CURDATE()"*. The server refuses. Show the line it logged:
 
    ```sh
-   tail -1 /tmp/mysql-mcp-audit.log
+   grep refused /tmp/mysql-mcp-audit.log | tail -1
    ```
+
+   Search for `refused` rather than taking the last line. Claude often runs a `SELECT` afterwards
+   to confirm nothing was deleted, and that becomes the newest line.
 
    Ask for the statement directly. With a softer "Delete those overdue tasks.", Claude reads the
    tool description and declines without calling the tool, so nothing is logged.
