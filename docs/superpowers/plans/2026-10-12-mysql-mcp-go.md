@@ -302,13 +302,14 @@ pinned library source.
 ### Task 15 — `cmd/mysql-mcp`: startup wiring and refusal (criterion 4)
 - **Files:** `cmd/mysql-mcp/main.go`, `cmd/mysql-mcp/main_test.go`
 - **API:**
-  - `run(ctx, getenv, stdin, stdout, stderr) error` runs these steps in order:
+  - `run(ctx, getenv, transport mcp.Transport, stderr io.Writer) error` runs these steps in order
+    (built with a transport parameter rather than stdin/stdout, so tests can drive the real wiring):
     1. config
     2. audit writer (file or stderr)
     3. `db.Open`
     4. `Grants` → `CheckGrants`
     5. `tools.NewServer`
-    6. `server.Run` over stdio, using the given readers and writers
+    6. `server.Run` on the transport; `main` passes `&mcp.StdioTransport{}`
   - `main` prints the error to stderr and exits 1.
 - **Test first:**
   - With no `MYSQL_DSN`, `run` fails with a config error and writes nothing to stdout.
@@ -319,8 +320,8 @@ pinned library source.
 ### Task 16 — End-to-end (criteria 1–3)
 - **Files:** `cmd/mysql-mcp/e2e_test.go`
 - **Test first (integration):**
-  - **In-memory:** the real `Store` on the seeded database, plus `tools.NewServer` and an
-    in-memory client.
+  - **In-memory:** the real `run()` startup path on the seeded database, with an in-memory
+    client.
     - Call `list_tables`, `describe_table("tasks")` and `query` with the demo question's SQL.
       The query must name the unique top project from Task 8.
     - `query("DELETE FROM tasks")` returns `IsError`.
