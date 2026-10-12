@@ -5,7 +5,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
     ports:
-      - "3316:3306"
+      # Loopback only: the demo passwords must not be reachable from the network.
+      - "127.0.0.1:3316:3306"
     volumes:
       - ./testdata/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
     healthcheck:
