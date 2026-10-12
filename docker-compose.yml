@@ -1,0 +1,16 @@
+# Local MySQL 8.0 with the sample database. Credentials are for local demo use only.
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3316:3306"
+    volumes:
+      - ./testdata/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    healthcheck:
+      # TCP only comes up after the seed has run, so --wait means "seeded".
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot", "--silent"]
+      interval: 2s
+      timeout: 5s
+      retries: 90
