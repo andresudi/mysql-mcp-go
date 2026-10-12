@@ -2,6 +2,7 @@
 package audit
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"sync"
@@ -54,12 +55,16 @@ func (l *Logger) Log(e Entry) error {
 	if e.Err != nil {
 		rec.Error = e.Err.Error()
 	}
-	b, err := json.Marshal(rec)
-	if err != nil {
+	// Encode writes a trailing newline. HTML escaping is off so SQL stays
+	// readable.
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(rec); err != nil {
 		return err
 	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	_, err = l.w.Write(append(b, '\n'))
+	_, err := l.w.Write(buf.Bytes())
 	return err
 }

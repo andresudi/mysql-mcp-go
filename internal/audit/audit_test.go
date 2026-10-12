@@ -93,3 +93,15 @@ func TestLogConcurrent(t *testing.T) {
 		}
 	}
 }
+
+// The audit log is read by people, so SQL operators like < and & must stay
+// as typed instead of being HTML-escaped by encoding/json.
+func TestLogKeepsSQLReadable(t *testing.T) {
+	var buf bytes.Buffer
+	if err := New(&buf).Log(Entry{Time: time.Now(), Tool: "query", SQL: "SELECT 1 FROM t WHERE a < b AND c <> 'x' & 1"}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), `a < b AND c <> 'x' & 1`) {
+		t.Errorf("SQL was escaped: %s", buf.String())
+	}
+}
