@@ -7,7 +7,7 @@ MCP client) explore and query a MySQL database **read-only**. It is built to be 
 at a real database: the server refuses to start unless its MySQL user can only read, and no
 tool call can change data or schema.
 
-**Demo (67 s):** [watch on Loom](https://www.loom.com/share/3f7ba8e362324af5bd66cb53e52a5344)
+**Demo (51 s):** [watch on Loom](https://www.loom.com/share/3f7ba8e362324af5bd66cb53e52a5344)
 
 ## Tools
 
